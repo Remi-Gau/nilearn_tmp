@@ -27,7 +27,7 @@ jobs:
                 os: [macos-13, macos-14]
                 numpy: [1.19, 1.26]
                 scipy: [1.8, 1.13]
-                pandas: [1.2, 2.2]
+                pandas: [1.4, 2.2]
                 nibabel: [4, 5.2]
         steps:
         -   uses: actions/checkout@v4
