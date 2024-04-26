@@ -35,7 +35,10 @@ jobs:
             with:
                 python-version: ${{ matrix.py }}
         -   name: Install
-            run: python -m pip install -r requirements.txt
+            run: |
+                python -m pip install -r requirements.txt
+                # for 3.12
+                pip install setuptools
         -   name: Try different versions
             run: python -m pip install numpy==${{ matrix.numpy }} scipy==${{ matrix.scipy }} pandas==${{ matrix.pandas }}
         -   name: Run tests
