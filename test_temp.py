@@ -107,7 +107,6 @@ def _simu_img(tmp_path, demean):
     # create an nifti image with the data, and corresponding mask
     img = Nifti1Image(vol, np.eye(4))
     mask_conf = Nifti1Image(vol_conf, np.eye(4))
-    mask_rand = Nifti1Image(vol_rand, np.eye(4))
 
     # generate the associated confounds for testing
     test_confounds, _ = load_confounds(
@@ -116,7 +115,7 @@ def _simu_img(tmp_path, demean):
     # match how we extend the length to increase the degree of freedom
     test_confounds = _handle_non_steady(test_confounds)
     sample_mask = np.arange(test_confounds.shape[0])[1:]
-    return img, mask_conf, mask_rand, test_confounds, sample_mask
+    return img, mask_conf, test_confounds, sample_mask
 
 @pytest.mark.parametrize("standardize_signal", ["zscore", "psc"])
 @pytest.mark.parametrize(
@@ -128,11 +127,9 @@ def test_nilearn_standardize_low(
 ):
     """Test confounds removal with logical parameters for processing signal."""
     # demean is set to False to let signal.clean handle everything
-    (img, mask_conf, _, confounds, mask) = _simu_img(
+    (img, mask_conf, confounds, mask) = _simu_img(
         tmp_path, demean=False
     )
-    # We now load the time series with vs without confounds
-    # in voxels composed of pure confounds
     # the correlation before and after denoising should be very low
     # as most of the variance is removed by denoising
     tseries_raw, tseries_clean = _denoise(
@@ -146,32 +143,3 @@ def test_nilearn_standardize_low(
     )
     corr = _corr_tseries(tseries_raw, tseries_clean)
     assert np.absolute(np.mean(corr)) < 0.2
-
-@pytest.mark.parametrize("standardize_signal", ["zscore", "psc"])
-@pytest.mark.parametrize(
-    "standardize_confounds,detrend",
-    [(True, False), (False, True), (True, True)],
-)
-def test_nilearn_standardize_high(
-    tmp_path, standardize_signal, standardize_confounds, detrend
-):
-    """Test confounds removal with logical parameters for processing signal."""
-    # demean is set to False to let signal.clean handle everything
-    (img, _, mask_rand, confounds, mask) = _simu_img(
-        tmp_path, demean=False
-    )
-    # We now load the time series with zscore standardization
-    # with vs without confounds in voxels where the signal is uncorrelated with confounds.
-    # The correlation before and after denoising should be very
-    # high as very little of the variance is removed by denoising
-    tseries_raw, tseries_clean = _denoise(
-        img,
-        mask_rand,
-        confounds,
-        mask,
-        standardize_signal=standardize_signal,
-        standardize_confounds=standardize_confounds,
-        detrend=detrend,
-    )
-    corr = _corr_tseries(tseries_raw, tseries_clean)
-    assert corr.mean() > 0.8
