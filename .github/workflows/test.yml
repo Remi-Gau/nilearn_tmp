@@ -23,7 +23,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                py: ['3.10', '3.11']
+                py: ['3.11']
                 os: [macos-13, macos-14]
                 numpy: [1.23, 1.26]
                 scipy: [1.9, 1.13]
