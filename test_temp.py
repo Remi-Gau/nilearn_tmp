@@ -99,14 +99,14 @@ def test_nilearn_standardize_low(
 ):
     """Test confounds removal with logical parameters for processing signal."""
     # demean is set to False to let signal.clean handle everything
-    (img, mask_conf, confounds, mask) = _simu_img(
+    (_, _, _, mask) = _simu_img(
         tmp_path, demean=False
     )
 
-    confounds.to_csv("confounds.tsv", index=False, sep="\t")
-    nb.save(img, "input.nii.gz")
-    nb.save(mask_conf, "mask.nii.gz")
-    pd.DataFrame(mask).to_csv("mask.tsv", index=False, sep="\t")
+    # confounds.to_csv("confounds.tsv", index=False, sep="\t")
+    # nb.save(img, "input.nii.gz")
+    # nb.save(mask_conf, "mask.nii.gz")
+    # pd.DataFrame(mask).to_csv("mask.tsv", index=False, sep="\t")
 
     # Extract time series with and without confounds.
     masker = NiftiMasker(
