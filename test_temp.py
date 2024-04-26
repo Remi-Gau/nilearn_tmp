@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 from nibabel import Nifti1Image
 from scipy.stats import pearsonr
+import nibabel as nb
 from sklearn.preprocessing import scale
 
 from nilearn.interfaces.fmriprep import load_confounds
@@ -10,35 +11,6 @@ from nilearn.interfaces.fmriprep.tests._testing import (
     create_tmp_filepath,
 )
 from nilearn.maskers import NiftiMasker
-
-def _corr_tseries(tseries1, tseries2):
-    """Compute the correlation between two sets of time series."""
-    corr = np.zeros(tseries1.shape[1])
-    for ind in range(tseries1.shape[1]):
-        corr[ind], _ = pearsonr(tseries1[:, ind], tseries2[:, ind])
-    return corr
-
-def _denoise(
-    img,
-    mask_img,
-    confounds,
-    sample_mask,
-    standardize_signal=False,
-    standardize_confounds=True,
-    detrend=False,
-):
-    """Extract time series with and without confounds."""
-    masker = NiftiMasker(
-        mask_img=mask_img,
-        standardize=standardize_signal,
-        standardize_confounds=standardize_confounds,
-        detrend=detrend,
-    )
-    tseries_raw = masker.fit_transform(img, sample_mask=sample_mask)
-    tseries_clean = masker.fit_transform(
-        img, confounds=confounds, sample_mask=sample_mask
-    )
-    return tseries_raw, tseries_clean
 
 def _handle_non_steady(confounds):
     """Simulate non steady state correctly while increase the length.
@@ -130,16 +102,27 @@ def test_nilearn_standardize_low(
     (img, mask_conf, confounds, mask) = _simu_img(
         tmp_path, demean=False
     )
-    # the correlation before and after denoising should be very low
-    # as most of the variance is removed by denoising
-    tseries_raw, tseries_clean = _denoise(
-        img,
-        mask_conf,
-        confounds,
-        mask,
-        standardize_signal=standardize_signal,
+
+    confounds.to_csv("confounds.tsv", index=False, sep="\t")
+    nb.save(img, "input.nii.gz")
+    nb.save(mask_conf, "mask.nii.gz")
+    pd.DataFrame(mask).to_csv("mask.tsv", index=False, sep="\t")
+
+    # Extract time series with and without confounds.
+    masker = NiftiMasker(
+        mask_img="mask.nii.gz",
+        standardize=standardize_signal,
         standardize_confounds=standardize_confounds,
         detrend=detrend,
     )
-    corr = _corr_tseries(tseries_raw, tseries_clean)
+    tseries_raw = masker.fit_transform("input.nii.gz", sample_mask=mask)
+    tseries_clean = masker.fit_transform(
+        "input.nii.gz", confounds="confounds.tsv", sample_mask=mask
+    )    
+
+    # the correlation before and after denoising should be very low
+    # as most of the variance is removed by denoising
+    corr = np.zeros(tseries_raw.shape[1])
+    for ind in range(tseries_raw.shape[1]):
+        corr[ind], _ = pearsonr(tseries_raw[:, ind], tseries_clean[:, ind])    
     assert np.absolute(np.mean(corr)) < 0.2
